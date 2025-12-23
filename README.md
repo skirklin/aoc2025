@@ -15,26 +15,60 @@ Create a `.env` file with your AoC session cookie:
 AOC_SESSION=your_session_cookie_here
 ```
 
-## Usage
+## Commands
 
-### Fetch Problems
+### `fetch` - Download problem and input
 ```bash
-python -m aoc2025 fetch <day>
+python -m aoc2025 fetch <day>      # Fetch one day
+python -m aoc2025 fetch --all      # Fetch all available days
 ```
 
-### Run a Solution
+### `test` - Run your solution and cache answers
 ```bash
-python -m aoc2025 run <day>
+python -m aoc2025 test <day>       # Test one day
+python -m aoc2025 test --all       # Test all days with solutions
 ```
 
-### Benchmark a Model
+This runs your reference solution and saves the answers so benchmarks can verify correctness.
+
+### `benchmark` - Run AI model on a problem
 ```bash
 python -m aoc2025 benchmark <day> --model haiku
 python -m aoc2025 benchmark <day> --model sonnet
 python -m aoc2025 benchmark <day> --model opus
 ```
 
-### Run All Benchmarks
+Requires: Problem fetched and answers cached (run `test` first).
+
+### `status` - Show overview
+```bash
+python -m aoc2025 status
+```
+
+Shows which days are fetched, tested, and benchmarked by model.
+
+### `serve` - Start local dashboard
+```bash
+python -m aoc2025 serve
+```
+
+### `build` - Export static HTML
+```bash
+python -m aoc2025 build
+```
+
+Exports to `dist/` folder for hosting.
+
+## Workflow
+
+1. **Fetch** the problem: `python -m aoc2025 fetch 1`
+2. **Write** your solution in `aoc2025/days/day01.py`
+3. **Test** to cache answers: `python -m aoc2025 test 1`
+4. **Benchmark** AI models: `python -m aoc2025 benchmark 1 --model sonnet`
+5. **View** results: `python -m aoc2025 serve`
+
+## Running All Benchmarks
+
 ```bash
 ./run_benchmarks.sh                    # All models, all days
 ./run_benchmarks.sh haiku              # Just haiku
@@ -42,79 +76,22 @@ python -m aoc2025 benchmark <day> --model opus
 ./run_benchmarks.sh haiku "1 2 3"      # Specific days
 ```
 
-### View Dashboard Locally
-```bash
-python -m aoc2025 dashboard
-```
-
 ## Deployment
 
-The dashboard can be exported as a static site and hosted on GitHub Pages.
-
-### 1. Generate Static Site
+### Generate static site
 ```bash
-python -m aoc2025 freeze
+python -m aoc2025 build
 ```
 
-This creates a `dist/` folder with static HTML files.
-
-### 2. Preview Locally
-```bash
-cd dist && python -m http.server 8000
-# Visit http://localhost:8000
-```
-
-### 3. Deploy to GitHub Pages
-
-**Option A: Manual deploy**
-```bash
-# From main branch, generate the static site
-python -m aoc2025 freeze
-
-# Create/update gh-pages branch
-git checkout --orphan gh-pages-new
-git rm -rf .
-cp -r dist/* .
-git add .
-git commit -m "Deploy static site"
-git branch -D gh-pages 2>/dev/null
-git branch -m gh-pages
-git push -f origin gh-pages
-git checkout main
-```
-
-**Option B: Using the deploy script**
+### Deploy to GitHub Pages
 ```bash
 ./deploy.sh
 ```
 
-### 4. Configure GitHub Pages
-
-1. Go to your repo on GitHub
-2. Settings → Pages
-3. Source: Deploy from a branch
-4. Branch: `gh-pages` / `/ (root)`
-5. Save
-
-Your site will be available at `https://<username>.github.io/aoc2025/`
-
-### 5. Custom Domain (Optional)
-
-To use a custom domain like `aoc.kirkl.in`:
-
-1. In your DNS provider, add a CNAME record:
-   - Host: `aoc`
-   - Value: `<username>.github.io`
-
-2. In GitHub repo Settings → Pages → Custom domain:
-   - Enter: `aoc.yourdomain.com`
-   - Check "Enforce HTTPS"
-
-3. Add a `CNAME` file to gh-pages branch:
-   ```bash
-   echo "aoc.yourdomain.com" > CNAME
-   git add CNAME && git commit -m "Add CNAME" && git push
-   ```
+### Custom domain
+Add CNAME record in your DNS:
+- Host: `aoc`
+- Value: `<username>.github.io`
 
 ## Project Structure
 
@@ -122,21 +99,12 @@ To use a custom domain like `aoc.kirkl.in`:
 aoc2025/
 ├── aoc2025/
 │   ├── cli.py          # Command-line interface
-│   ├── core.py         # Core utilities (fetch, submit, etc.)
+│   ├── core.py         # Core utilities
 │   ├── dashboard.py    # Flask web dashboard
-│   ├── db.py           # SQLite database for benchmark results
+│   ├── db.py           # SQLite database
 │   ├── freeze.py       # Static site generator
-│   ├── days/           # Solution files (day01.py, day02.py, ...)
-│   └── templates/      # Jinja2 templates for dashboard
-├── .cache/             # Problem data, inputs, benchmark runs (gitignored)
+│   └── days/           # Your reference solutions
+├── .cache/             # Problem data and benchmark runs (gitignored)
 ├── dist/               # Generated static site (gitignored)
-└── run_benchmarks.sh   # Script to run all benchmarks
+└── run_benchmarks.sh   # Batch benchmark script
 ```
-
-## Data Storage
-
-Benchmark data is stored in `.cache/2025/`:
-- `aoc.db` - SQLite database with run results
-- `runs/<run_id>/` - Individual run artifacts (solution code, Claude output)
-- `<day>/problem.md` - Problem statements
-- `<day>/inputs/` - Input files

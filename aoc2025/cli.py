@@ -31,40 +31,44 @@ def load_day(day: int):
         return None
 
 
-@app.command
-def run(day: int, year: int = CURRENT_YEAR):
-    """Run solution for a day."""
-    module = load_day(day)
-    if not module:
-        print(f"No solution found for day {day}")
-        return
-
-    data = read_input(day, year)
-
-    if hasattr(module, 'part1'):
-        start = time.perf_counter()
-        result = module.part1(data)
-        elapsed = time.perf_counter() - start
-        record_execution_time(day, 1, elapsed, year)
-        print(f"Part 1: {result}  ({elapsed*1000:.2f}ms)")
-
-    if hasattr(module, 'part2'):
-        start = time.perf_counter()
-        result = module.part2(data)
-        elapsed = time.perf_counter() - start
-        record_execution_time(day, 2, elapsed, year)
-        print(f"Part 2: {result}  ({elapsed*1000:.2f}ms)")
 
 
-@app.command
-def fetch_day(day: int, year: int = CURRENT_YEAR, *, force: bool = False):
-    """Fetch problem and input for a day."""
-    problem, input_text = fetch(day, year, force)
-    print(f"\n{'='*60}")
-    print(f"Day {day} - Problem fetched ({len(problem)} chars)")
-    print(f"Input: {len(input_text.splitlines())} lines")
-    print(f"{'='*60}\n")
-    print(problem)
+@app.command(name="fetch")
+def fetch_cmd(day: int = None, year: int = CURRENT_YEAR, *, force: bool = False, all: bool = False):
+    """Fetch problem and input from adventofcode.com.
+
+    Use --all to fetch all available days.
+    """
+    from datetime import datetime
+
+    if all:
+        # Determine which days are available
+        now = datetime.now()
+        if now.year == year and now.month == 12:
+            max_day = min(now.day, 25)
+        elif now.year > year or (now.year == year and now.month > 12):
+            max_day = 25
+        else:
+            max_day = 0
+
+        fetched = 0
+        for d in range(1, max_day + 1):
+            try:
+                problem, input_text = fetch(d, year, force)
+                print(f"Day {d}: ✓ ({len(input_text.splitlines())} lines)")
+                fetched += 1
+            except Exception as e:
+                print(f"Day {d}: ✗ ({e})")
+        print(f"\nFetched {fetched} days")
+    elif day is not None:
+        problem, input_text = fetch(day, year, force)
+        print(f"\n{'='*60}")
+        print(f"Day {day} - Problem fetched ({len(problem)} chars)")
+        print(f"Input: {len(input_text.splitlines())} lines")
+        print(f"{'='*60}\n")
+        print(problem)
+    else:
+        print("Specify a day number or use --all")
 
 
 @app.command
@@ -82,79 +86,86 @@ def show_problem(day: int, year: int = CURRENT_YEAR):
 
 
 @app.command
-def test(day: int, year: int = CURRENT_YEAR):
-    """Test solution against examples from problem and cached input/answer pairs."""
-    from aoc2025.core import extract_examples
+def test(day: int = None, year: int = CURRENT_YEAR, *, all: bool = False):
+    """Run your solution and cache the correct answers.
+
+    This runs your reference solution against the input and saves the answers
+    so they can be used to verify benchmark runs.
+
+    Use --all to test all days with solutions.
+    """
+    if all:
+        from aoc2025.core import CACHE_DIR
+        tested = 0
+        for d in range(1, 26):
+            # Check if problem exists and solution exists
+            problem_file = CACHE_DIR / str(year) / str(d) / "problem.md"
+            if not problem_file.exists():
+                continue
+            module = load_day(d)
+            if not module:
+                continue
+
+            print(f"\n{'='*40}")
+            print(f"Day {d}")
+            print('='*40)
+            _test_day(d, year)
+            tested += 1
+        print(f"\nTested {tested} days")
+        return
+
+    if day is None:
+        print("Specify a day number or use --all")
+        return
+
+    _test_day(day, year)
+
+
+def _test_day(day: int, year: int = CURRENT_YEAR):
+    """Run solution for a day and cache answers."""
+    import hashlib
 
     module = load_day(day)
     if not module:
         print(f"No solution found for day {day}")
-        return
+        print(f"  Create: aoc2025/days/day{day:02d}.py")
+        return False
 
-    passed = 0
-    failed = 0
+    try:
+        data = read_input(day, year)
+    except FileNotFoundError:
+        print(f"No input found for day {day}")
+        print(f"  Run: python -m aoc2025 fetch {day}")
+        return False
 
-    # First, test against examples extracted from problem statement
-    examples = extract_examples(day, year)
-    if examples:
-        print("Testing against problem examples:")
-        for i, example in enumerate(examples):
-            data = example["input"]
-            for part_num, part_fn in [("1", "part1"), ("2", "part2")]:
-                expected_key = f"part{part_num}"
-                expected_val = example.get(expected_key)
-                if not expected_val:
-                    continue
-                if not hasattr(module, part_fn):
-                    continue
+    input_hash = hashlib.sha256(data.encode()).hexdigest()[:16]
+    results = {}
 
-                try:
-                    result = str(getattr(module, part_fn)(data))
-                    if result == expected_val:
-                        print(f"  [example {i+1}] Part {part_num}: PASS")
-                        passed += 1
-                    else:
-                        print(f"  [example {i+1}] Part {part_num}: FAIL (got {result}, expected {expected_val})")
-                        failed += 1
-                except Exception as e:
-                    print(f"  [example {i+1}] Part {part_num}: ERROR ({e})")
-                    failed += 1
-    else:
-        print("No examples found in problem statement")
+    if hasattr(module, 'part1'):
+        start = time.perf_counter()
+        result = module.part1(data)
+        elapsed = time.perf_counter() - start
+        record_execution_time(day, 1, elapsed, year)
+        if result is not None:
+            results['1'] = str(result)
+            db.save_answer(day, input_hash, 1, str(result), year)
+            print(f"Part 1: {result}  ({elapsed*1000:.2f}ms) ✓ cached")
+        else:
+            print(f"Part 1: None  ({elapsed*1000:.2f}ms)")
 
-    # Then test against cached answers
-    answers = db.get_answers(day, year)
-    inputs = list_inputs(day, year)
+    if hasattr(module, 'part2'):
+        start = time.perf_counter()
+        result = module.part2(data)
+        elapsed = time.perf_counter() - start
+        record_execution_time(day, 2, elapsed, year)
+        if result is not None:
+            results['2'] = str(result)
+            db.save_answer(day, input_hash, 2, str(result), year)
+            print(f"Part 2: {result}  ({elapsed*1000:.2f}ms) ✓ cached")
+        else:
+            print(f"Part 2: None  ({elapsed*1000:.2f}ms)")
 
-    if answers and inputs:
-        print("\nTesting against cached answers:")
-        for input_hash in inputs:
-            expected = answers.get(input_hash, {})
-            if not expected:
-                continue
-
-            data = get_input_by_hash(day, input_hash, year)
-
-            for part_num, part_fn in [("1", "part1"), ("2", "part2")]:
-                if part_num not in expected:
-                    continue
-                if not hasattr(module, part_fn):
-                    print(f"  [{input_hash[:8]}] Part {part_num}: no {part_fn}() function")
-                    failed += 1
-                    continue
-
-                result = str(getattr(module, part_fn)(data))
-                expected_val = expected[part_num]
-
-                if result == expected_val:
-                    print(f"  [{input_hash[:8]}] Part {part_num}: PASS")
-                    passed += 1
-                else:
-                    print(f"  [{input_hash[:8]}] Part {part_num}: FAIL (got {result}, expected {expected_val})")
-                    failed += 1
-
-    print(f"\nDay {day}: {passed} passed, {failed} failed")
-    return failed == 0
+    return len(results) > 0
 
 
 def format_duration(seconds: float) -> str:
@@ -511,13 +522,31 @@ def benchmark(
     from pathlib import Path
     from aoc2025.core import get_claude_token_counts
 
-    # Get problem and input
+    # Check prerequisites
     problem = show(day, year)
     if not problem:
-        print(f"No problem found for day {day}. Run 'fetch-day {day}' first.")
+        print(f"Error: No problem found for day {day}")
+        print(f"  Run: python -m aoc2025 fetch {day}")
         return
 
-    input_data = read_input(day, year)
+    try:
+        input_data = read_input(day, year)
+    except FileNotFoundError:
+        print(f"Error: No input found for day {day}")
+        print(f"  Run: python -m aoc2025 fetch {day}")
+        return
+
+    # Check for cached answers
+    import hashlib
+    input_hash = hashlib.sha256(input_data.encode()).hexdigest()[:16]
+    answers = db.get_answers(day, year)
+    expected = answers.get(input_hash, {})
+
+    if not expected:
+        print(f"Error: No cached answers for day {day}")
+        print(f"  Run: python -m aoc2025 test {day}")
+        print(f"  (This runs your reference solution to establish the correct answers)")
+        return
 
     # Create run record first to get ID
     run_label = label or model
@@ -605,12 +634,7 @@ The solution file already has a template. Edit it to implement your solution.
             print(f"  Error loading solution: {e}")
             module = None
 
-    answers = db.get_answers(day, year)
-
-    # Get input hash for answer lookup
-    import hashlib
-    input_hash = hashlib.sha256(input_data.encode()).hexdigest()[:16]
-    expected = answers.get(input_hash, {})
+    # expected was already computed at the start
 
     part1_solved = False
     part2_solved = False
@@ -699,8 +723,8 @@ def tokens():
 
 
 @app.command
-def dashboard(port: int = None, debug: bool = False):
-    """Launch the web dashboard to explore results. Auto-finds free port if not specified."""
+def serve(port: int = None, debug: bool = False):
+    """Start local web dashboard to view results."""
     from aoc2025.dashboard import run_dashboard
     print("Press Ctrl+C to stop")
     run_dashboard(port=port, debug=debug)
@@ -755,8 +779,8 @@ def migrate(year: int = CURRENT_YEAR):
 
 
 @app.command
-def freeze(output_dir: str = None):
-    """Freeze the dashboard to static HTML for hosting."""
+def build(output_dir: str = None):
+    """Export dashboard to static HTML for hosting."""
     from pathlib import Path
     from aoc2025.freeze import freeze as do_freeze
 
@@ -765,25 +789,48 @@ def freeze(output_dir: str = None):
 
 
 @app.command
-def sync(year: int = CURRENT_YEAR):
-    """Fetch all available problems and generate answers from reference solutions."""
-    from aoc2025.freeze import ensure_problems_fetched, ensure_answers_generated
+def status(year: int = CURRENT_YEAR):
+    """Show overview of fetched problems, tested solutions, and benchmarks."""
+    from aoc2025.core import CACHE_DIR
 
-    print("Fetching missing problems...")
-    fetched = ensure_problems_fetched(year)
-    if fetched:
-        print(f"  Fetched {len(fetched)} new problems")
-    else:
-        print("  All problems up to date")
+    print(f"AoC {year} Status")
+    print("=" * 70)
+    print(f"{'Day':<5} {'Problem':<9} {'Tested':<8} {'Haiku':<8} {'Sonnet':<8} {'Opus':<8}")
+    print("-" * 70)
 
-    print("\nGenerating missing answers from reference solutions...")
-    generated = ensure_answers_generated(year)
-    if generated:
-        print(f"  Generated {generated} answers")
-    else:
-        print("  All answers up to date")
+    all_runs = db.get_all_runs(year)
 
-    print("\nSync complete!")
+    for day in range(1, 26):
+        # Check if problem exists
+        problem_file = CACHE_DIR / str(year) / str(day) / "problem.md"
+        has_problem = "✓" if problem_file.exists() else "-"
+
+        if not problem_file.exists():
+            continue
+
+        # Check if answers are cached (i.e., tested)
+        answers = db.get_answers(day, year)
+        has_answers = "✓" if answers else "-"
+
+        # Check benchmark runs by model
+        def get_stars(model_name):
+            runs = [r for r in all_runs if r['day'] == day and r.get('model') == model_name]
+            if not runs:
+                return "-"
+            # Get best run
+            best = max(runs, key=lambda r: (r.get('part1_solved', 0), r.get('part2_solved', 0)))
+            p1 = "*" if best.get('part1_solved') else ""
+            p2 = "*" if best.get('part2_solved') else ""
+            return p1 + p2 if (p1 or p2) else "✗"
+
+        haiku = get_stars("haiku")
+        sonnet = get_stars("sonnet")
+        opus = get_stars("opus")
+
+        print(f"{day:<5} {has_problem:<9} {has_answers:<8} {haiku:<8} {sonnet:<8} {opus:<8}")
+
+    print("-" * 70)
+    print("\nLegend: ** = both parts, * = part 1 only, ✗ = attempted but failed, - = not run")
 
 
 def main():
