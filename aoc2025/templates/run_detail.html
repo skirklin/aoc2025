@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run {{ run.id }} - AoC {{ run.day }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .star {
+            color: #ffc107;
+        }
+        .unsolved {
+            color: #ccc;
+        }
+        .metric-card {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .metric-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        .tab-content {
+            padding: 1.5rem;
+        }
+        .solution-code pre {
+            background: #282c34;
+            border-radius: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .claude-output {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            border: 1px solid #dee2e6;
+        }
+        .problem-content {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .problem-content pre {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+        }
+        .problem-content code {
+            color: #198754;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-light bg-light border-bottom mb-4">
+        <div class="container">
+            <a href="/" class="navbar-brand mb-0 h1">
+                <span class="text-warning">*</span> AoC Benchmarks
+            </a>
+            <span class="text-muted">Run {{ run.id }}</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>Run {{ run.id }}</h2>
+                <p class="text-muted mb-0">
+                    Day {{ run.day }} &bull; {{ run.model or 'unknown' }} &bull; {{ run.label or '-' }}
+                </p>
+            </div>
+            <div>
+                <a href="/day/{{ run.day }}.html" class="btn btn-outline-secondary btn-sm me-2">&larr; Day {{ run.day }}</a>
+                <a href="/" class="btn btn-outline-secondary btn-sm">&larr; Overview</a>
+            </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="metric-card">
+                    <div class="metric-value">
+                        {% if run.part1_solved %}<span class="star">*</span>{% else %}-{% endif %}
+                        {% if run.part2_solved %}<span class="star">*</span>{% else %}-{% endif %}
+                    </div>
+                    <div class="metric-label">Stars</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="metric-card">
+                    <div class="metric-value">
+                        {% if run.wall_clock_seconds %}
+                        {{ "%.0f"|format(run.wall_clock_seconds) }}s
+                        {% else %}-{% endif %}
+                    </div>
+                    <div class="metric-label">Wall Clock</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="metric-card">
+                    <div class="metric-value">
+                        {% if tokens %}
+                        {{ "{:,}".format(tokens.input + tokens.output) }}
+                        {% else %}-{% endif %}
+                    </div>
+                    <div class="metric-label">Tokens</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="metric-card">
+                    <div class="metric-value">
+                        {% if run.part1_exec_ms %}
+                        {{ "%.1f"|format(run.part1_exec_ms) }}ms
+                        {% else %}-{% endif %}
+                    </div>
+                    <div class="metric-label">P1 Exec</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="metric-card">
+                    <div class="metric-value">
+                        {% if run.part2_exec_ms %}
+                        {{ "%.1f"|format(run.part2_exec_ms) }}ms
+                        {% else %}-{% endif %}
+                    </div>
+                    <div class="metric-label">P2 Exec</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="metric-card">
+                    <div class="metric-value">
+                        {% if run.timed_out %}<span class="text-danger">Yes</span>{% else %}No{% endif %}
+                    </div>
+                    <div class="metric-label">Timed Out</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="runTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="solution-tab" data-bs-toggle="tab" data-bs-target="#solution" type="button">Solution</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="output-tab" data-bs-toggle="tab" data-bs-target="#output" type="button">Claude Output</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="problem-tab" data-bs-toggle="tab" data-bs-target="#problem" type="button">Problem</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button">Details</button>
+            </li>
+        </ul>
+
+        <div class="tab-content card" id="runTabsContent">
+            <!-- Solution Tab -->
+            <div class="tab-pane fade show active" id="solution" role="tabpanel">
+                {% if solution_code %}
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">day{{ "%02d"|format(run.day) }}.py</h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="copyCode()">Copy Code</button>
+                </div>
+                <div class="solution-code">
+                    <pre><code class="language-python" id="solutionCode">{{ solution_code }}</code></pre>
+                </div>
+                {% else %}
+                <p class="text-muted">No solution file found.</p>
+                {% endif %}
+            </div>
+
+            <!-- Claude Output Tab -->
+            <div class="tab-pane fade" id="output" role="tabpanel">
+                {% if claude_output %}
+                <div class="claude-output">{{ claude_output }}</div>
+                {% else %}
+                <p class="text-muted">No output captured.</p>
+                {% endif %}
+            </div>
+
+            <!-- Problem Tab -->
+            <div class="tab-pane fade" id="problem" role="tabpanel">
+                <div class="problem-content">
+                    {% if problem_html %}
+                    {{ problem_html|safe }}
+                    {% else %}
+                    <p class="text-muted">Problem not available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Details Tab -->
+            <div class="tab-pane fade" id="details" role="tabpanel">
+                <table class="table table-sm">
+                    <tr><td>Run ID</td><td><code>{{ run.id }}</code></td></tr>
+                    <tr><td>Day</td><td>{{ run.day }}</td></tr>
+                    <tr><td>Model</td><td>{{ run.model or '-' }}</td></tr>
+                    <tr><td>Label</td><td>{{ run.label or '-' }}</td></tr>
+                    <tr><td>Started</td><td>{{ run.started_at or '-' }}</td></tr>
+                    <tr><td>Ended</td><td>{{ run.ended_at or '-' }}</td></tr>
+                    <tr><td>Part 1 Solved</td><td>{{ 'Yes' if run.part1_solved else 'No' }}</td></tr>
+                    <tr><td>Part 2 Solved</td><td>{{ 'Yes' if run.part2_solved else 'No' }}</td></tr>
+                    <tr><td>Part 1 Exec Time</td><td>{{ "%.2f ms"|format(run.part1_exec_ms) if run.part1_exec_ms else '-' }}</td></tr>
+                    <tr><td>Part 2 Exec Time</td><td>{{ "%.2f ms"|format(run.part2_exec_ms) if run.part2_exec_ms else '-' }}</td></tr>
+                    <tr><td>Wall Clock Time</td><td>{{ "%.1f s"|format(run.wall_clock_seconds) if run.wall_clock_seconds else '-' }}</td></tr>
+                    <tr><td>Timed Out</td><td>{{ 'Yes' if run.timed_out else 'No' }}</td></tr>
+                    {% if tokens %}
+                    <tr><td>Input Tokens</td><td>{{ "{:,}".format(tokens.input) }}</td></tr>
+                    <tr><td>Output Tokens</td><td>{{ "{:,}".format(tokens.output) }}</td></tr>
+                    <tr><td>Cache Read</td><td>{{ "{:,}".format(tokens.cache_read) }}</td></tr>
+                    <tr><td>Cache Create</td><td>{{ "{:,}".format(tokens.cache_create) }}</td></tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        hljs.highlightAll();
+
+        function copyCode() {
+            const code = document.getElementById('solutionCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Code copied!');
+            });
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

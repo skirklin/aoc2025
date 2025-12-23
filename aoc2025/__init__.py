@@ -1,0 +1,43 @@
+"""Advent of Code 2025 solutions and tooling."""
+
+from aoc2025.core import (
+    CACHE_DIR,
+    CURRENT_YEAR,
+    fetch,
+    fetch_input,
+    fetch_problem,
+    get_answers,
+    get_input_by_hash,
+    get_metrics,
+    get_solve_time,
+    get_token_usage,
+    input_hash,
+    list_inputs,
+    read_input,
+    record_execution_time,
+    save_answer,
+    show,
+    store_input,
+    submit,
+)
+
+__all__ = [
+    "CACHE_DIR",
+    "CURRENT_YEAR",
+    "fetch",
+    "fetch_input",
+    "fetch_problem",
+    "get_answers",
+    "get_input_by_hash",
+    "get_metrics",
+    "get_solve_time",
+    "get_token_usage",
+    "input_hash",
+    "list_inputs",
+    "read_input",
+    "record_execution_time",
+    "save_answer",
+    "show",
+    "store_input",
+    "submit",
+]

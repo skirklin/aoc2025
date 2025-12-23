@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AoC {{ year }} Benchmark Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .table th {
+            position: sticky;
+            top: 0;
+            background: white;
+        }
+        .star {
+            color: #ffc107;
+        }
+        .check {
+            color: #198754;
+        }
+        .fail {
+            color: #dc3545;
+        }
+        .cell-result {
+            text-align: center;
+        }
+        .cell-result .time {
+            color: #6c757d;
+            font-size: 0.85em;
+        }
+        .cell-result .tokens {
+            color: #6c757d;
+            font-size: 0.8em;
+        }
+        .empty-cell {
+            color: #ccc;
+        }
+        .unsolved {
+            color: #ccc;
+        }
+        .day-link {
+            font-weight: 500;
+        }
+        .model-stats .solved {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-light bg-light border-bottom mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <span class="text-warning">*</span> AoC {{ year }} Benchmarks
+            </span>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        {% if models %}
+        <!-- Model Summary Cards -->
+        <div class="row mb-4">
+            {% for model, data in models.items() %}
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0">{{ model }}</h6>
+                    </div>
+                    <div class="card-body model-stats">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="fs-4 solved">{{ data.stats.solved_p1 + data.stats.solved_p2 }}</div>
+                                <small class="text-muted">Stars</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fs-4">{{ data.stats.total_runs }}</div>
+                                <small class="text-muted">Runs</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fs-5">{{ "%.0f"|format(data.stats.total_time / 60) }}m</div>
+                                <small class="text-muted">Time</small>
+                            </div>
+                        </div>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">{{ "{:,}".format(data.stats.total_tokens) }} tokens</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Comparison Matrix -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Model Comparison</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if comparison.models %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                {% for model in comparison.models %}
+                                <th class="model-header">{{ model }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for day in comparison.days %}
+                            <tr>
+                                <td>
+                                    <a href="/day/{{ day }}.html" class="day-link">Day {{ day }}</a>
+                                </td>
+                                {% for model in comparison.models %}
+                                <td class="cell-result">
+                                    {% if day in comparison.matrix and model in comparison.matrix[day] %}
+                                        {% set r = comparison.matrix[day][model] %}
+                                        <a href="/run/{{ r.run_id }}.html">
+                                            <div class="stars">
+                                                <span class="{{ 'star' if r.p1 else 'unsolved' }}">*</span>
+                                                <span class="{{ 'star' if r.p2 else 'unsolved' }}">*</span>
+                                            </div>
+                                            {% if r.time %}
+                                            <div class="time">{{ "%.0f"|format(r.time) }}s</div>
+                                            {% endif %}
+                                            {% if r.tokens %}
+                                            <div class="tokens">{{ "{:,}".format(r.tokens) }} tok</div>
+                                            {% endif %}
+                                        </a>
+                                    {% else %}
+                                        <span class="empty-cell">-</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <p>No benchmark runs yet.</p>
+                    <p>Run a benchmark with: <code>python -m aoc2025 benchmark &lt;day&gt; --model sonnet</code></p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

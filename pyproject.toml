@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aoc2025"
+version = "0.1.0"
+description = "Advent of Code 2025 solutions and tooling"
+requires-python = ">=3.10"
+dependencies = [
+    "requests",
+    "beautifulsoup4",
+    "markdownify",
+    "python-dotenv",
+    "cyclopts",
+    "flask",
+    "markdown",
+    "frozen-flask",
+]
+
+[project.scripts]
+aoc = "aoc2025.__main__:main"
