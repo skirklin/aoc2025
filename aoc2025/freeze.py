@@ -11,8 +11,54 @@ from flask_frozen import Freezer
 
 from aoc2025.dashboard import app, get_days_with_problems
 from aoc2025 import db
-from aoc2025.core import CURRENT_YEAR, CACHE_DIR
+from aoc2025.core import CURRENT_YEAR, CACHE_DIR, list_inputs, get_input_by_hash
 from aoc2025 import fetch
+
+
+def ensure_answers_generated(year: int = CURRENT_YEAR):
+    """Generate answers for all inputs using reference solutions."""
+    import importlib
+
+    generated = 0
+    for day in get_days_with_problems(year):
+        # Try to load the reference solution
+        try:
+            module = importlib.import_module(f"aoc2025.days.day{day:02d}")
+        except ImportError:
+            continue
+
+        # Get all inputs for this day
+        inputs = list_inputs(day, year)
+        for input_hash in inputs:
+            # Check if we already have answers for this input
+            existing = db.get_answers(day, year)
+            if input_hash in existing and '1' in existing[input_hash] and '2' in existing[input_hash]:
+                continue
+
+            # Run the reference solution
+            data = get_input_by_hash(day, input_hash, year)
+            if data is None:
+                continue
+
+            if hasattr(module, 'part1'):
+                try:
+                    result = module.part1(data)
+                    if result is not None:
+                        db.save_answer(day, input_hash, 1, str(result), year)
+                        generated += 1
+                except Exception:
+                    pass
+
+            if hasattr(module, 'part2'):
+                try:
+                    result = module.part2(data)
+                    if result is not None:
+                        db.save_answer(day, input_hash, 2, str(result), year)
+                        generated += 1
+                except Exception:
+                    pass
+
+    return generated
 
 
 def ensure_problems_fetched(year: int = CURRENT_YEAR):
@@ -83,6 +129,14 @@ def freeze(output_dir: Path = None):
         print(f"  Fetched {len(fetched)} new problems")
     else:
         print("  All problems up to date")
+
+    # Ensure answers are generated from reference solutions
+    print("\nGenerating missing answers from reference solutions...")
+    generated = ensure_answers_generated()
+    if generated:
+        print(f"  Generated {generated} answers")
+    else:
+        print("  All answers up to date")
 
     app.config["FREEZER_DESTINATION"] = str(output_dir)
     app.config["FREEZER_RELATIVE_URLS"] = True
