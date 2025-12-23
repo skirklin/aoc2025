@@ -122,22 +122,6 @@ def freeze(output_dir: Path = None):
     if output_dir is None:
         output_dir = Path(__file__).parent.parent / "dist"
 
-    # Ensure all available problems are fetched
-    print("Checking for missing problems...")
-    fetched = ensure_problems_fetched()
-    if fetched:
-        print(f"  Fetched {len(fetched)} new problems")
-    else:
-        print("  All problems up to date")
-
-    # Ensure answers are generated from reference solutions
-    print("\nGenerating missing answers from reference solutions...")
-    generated = ensure_answers_generated()
-    if generated:
-        print(f"  Generated {generated} answers")
-    else:
-        print("  All answers up to date")
-
     app.config["FREEZER_DESTINATION"] = str(output_dir)
     app.config["FREEZER_RELATIVE_URLS"] = True
 

@@ -764,5 +764,27 @@ def freeze(output_dir: str = None):
     do_freeze(output)
 
 
+@app.command
+def sync(year: int = CURRENT_YEAR):
+    """Fetch all available problems and generate answers from reference solutions."""
+    from aoc2025.freeze import ensure_problems_fetched, ensure_answers_generated
+
+    print("Fetching missing problems...")
+    fetched = ensure_problems_fetched(year)
+    if fetched:
+        print(f"  Fetched {len(fetched)} new problems")
+    else:
+        print("  All problems up to date")
+
+    print("\nGenerating missing answers from reference solutions...")
+    generated = ensure_answers_generated(year)
+    if generated:
+        print(f"  Generated {generated} answers")
+    else:
+        print("  All answers up to date")
+
+    print("\nSync complete!")
+
+
 def main():
     app()
