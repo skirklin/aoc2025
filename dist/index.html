@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AoC 2025 Benchmark Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .table th {
+            position: sticky;
+            top: 0;
+            background: white;
+        }
+        .star {
+            color: #ffc107;
+        }
+        .check {
+            color: #198754;
+        }
+        .fail {
+            color: #dc3545;
+        }
+        .cell-result {
+            text-align: center;
+        }
+        .cell-result .time {
+            color: #6c757d;
+            font-size: 0.85em;
+        }
+        .cell-result .tokens {
+            color: #6c757d;
+            font-size: 0.8em;
+        }
+        .empty-cell {
+            color: #ccc;
+        }
+        .unsolved {
+            color: #ccc;
+        }
+        .day-link {
+            font-weight: 500;
+        }
+        .model-stats .solved {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-light bg-light border-bottom mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <span class="text-warning">*</span> AoC 2025 Benchmarks
+            </span>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        
+
+        <!-- Comparison Matrix -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Model Comparison</h5>
+            </div>
+            <div class="card-body p-0">
+                
+                <div class="p-4 text-center text-muted">
+                    <p>No benchmark runs yet.</p>
+                    <p>Run a benchmark with: <code>python -m aoc2025 benchmark &lt;day&gt; --model sonnet</code></p>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
